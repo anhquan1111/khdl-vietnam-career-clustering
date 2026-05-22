@@ -1,0 +1,49 @@
+# ─── Dữ liệu (quá lớn cho git, có thể tái tạo từ script) ────────────────────
+# Raw data: tải từ HuggingFace bằng notebooks/_download_and_split.py
+raw_data/
+# Clean data: sinh ra từ notebooks/02_Cleaning.ipynb
+clean_data/
+
+# Output figures (nếu sinh ra)
+figures/
+
+# ─── Python ──────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.Python
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtualenv
+.venv/
+venv/
+env/
+.env
+
+# ─── Jupyter ─────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+
+# ─── IDE / OS ────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Bài nộp tạm (sinh ra cuối cùng) ─────────────────────────────────────────
+# Nếu để PDF / slide vào thư mục report/ slide/ và muốn ignore khi đang draft:
+# report/*.pdf
+# slide/*.pdf
+
+# ─── Scripts tạm bợ (builder dạng underscore prefix) ─────────────────────────
+notebooks/_*.py
+!notebooks/_download_and_split.py

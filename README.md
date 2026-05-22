@@ -1,0 +1,106 @@
+# Nhóm 09 — Dự đoán mức lương kỳ vọng dựa trên bản mô tả công việc (Job Description)
+
+Tiểu luận cuối kỳ môn **Khoa học Dữ liệu**, năm học 2025–2026.
+
+- **Đề tài (số 2):** Dự đoán mức lương kỳ vọng dựa trên bản mô tả công việc.
+- **Output:** `lương kỳ vọng = (lương min + lương max) / 2` (ví dụ: "23–28 triệu" ⇒ 25.5 triệu).
+- **Input:** Tất cả các trường còn lại của dataset.
+- **Dataset gốc:** [tinixai/vietnamese-job-descriptions](https://huggingface.co/datasets/tinixai/vietnamese-job-descriptions) — 606,878 dòng × 14 cột (Parquet, ~293 MB).
+
+---
+
+## 1. Cấu trúc thư mục nộp bài
+
+```
+09 - Dự đoán mức lương kỳ vọng dựa trên bản mô tả công việc (Job Description)/
+├── README.md                          ← file này (hướng dẫn chạy)
+├── report/
+│   └── BaoCao.pdf                     ← bản PDF quyển báo cáo (phải khớp 100% bản in)
+├── slide/
+│   └── Slide.pdf                      ← bản PDF slide trình bày
+├── notebooks/
+│   ├── 01_EDA.ipynb                   ← khảo sát & trực quan hoá
+│   ├── 02_Cleaning.ipynb              ← làm sạch dữ liệu thô → clean
+│   ├── 03_Feature_Engineering.ipynb   ← trích đặc trưng từ clean
+│   └── 04_Modeling.ipynb              ← huấn luyện & đánh giá mô hình
+├── raw_data/
+│   ├── raw_data_train.csv             ← dữ liệu thô tập train (80%)
+│   └── raw_data_test.csv              ← dữ liệu thô tập test (20%)
+└── clean_data/
+    ├── clean_data_train.csv           ← dữ liệu đã làm sạch (chưa feature engineering)
+    └── clean_data_test.csv
+```
+
+> Các tên `raw_data_{train,test}.csv` và `clean_data_{train,test}.csv` được đặt **đúng nguyên văn** theo yêu cầu trong thông báo nộp tiểu luận.
+
+---
+
+## 2. Trình tự chạy chương trình
+
+Cần Python ≥ 3.10. Cài thư viện:
+
+```powershell
+pip install pandas pyarrow scikit-learn matplotlib seaborn jupyter
+```
+
+Chạy lần lượt 4 notebook theo thứ tự:
+
+| Bước | Notebook                          | Input                                   | Output                              |
+|------|-----------------------------------|-----------------------------------------|-------------------------------------|
+| 1    | `01_EDA.ipynb`                    | `raw_data/raw_data_{train,test}.csv`    | biểu đồ + nhận xét (in-notebook)    |
+| 2    | `02_Cleaning.ipynb`               | `raw_data/raw_data_{train,test}.csv`    | `clean_data/clean_data_{train,test}.csv` |
+| 3    | `03_Feature_Engineering.ipynb`    | `clean_data/clean_data_{train,test}.csv`| ma trận đặc trưng (in-memory)       |
+| 4    | `04_Modeling.ipynb`               | đặc trưng từ bước 3                     | model + bảng kết quả                |
+
+**Lưu ý reproducibility:** mọi bước random đều dùng `random_state=42`.
+
+---
+
+## 3. Nguồn dữ liệu thô
+
+Dữ liệu thô được lấy từ Hugging Face theo link sau:
+
+```
+https://huggingface.co/datasets/tinixai/vietnamese-job-descriptions/resolve/main/data.parquet
+```
+
+Sau khi tải, dữ liệu được chia ngẫu nhiên **80% train / 20% test** (`random_state=42`) và xuất ra hai file CSV trong `raw_data/`. Script tải/chia gốc lưu tại `notebooks/_download_and_split.py` (có thể chạy lại để tái tạo).
+
+### Schema (14 cột)
+
+| Cột | Kiểu | Mô tả |
+|---|---|---|
+| `id` | int | Mã định danh bài đăng |
+| `job_title` | str | Chức danh công việc |
+| `company_name` | str | Tên công ty |
+| **`salary`** | str | **Thông tin lương dạng văn bản — dùng để tạo nhãn `expected_salary`** |
+| `location` | str | Địa điểm làm việc |
+| `job_type` | str | Hình thức (full-time, part-time, remote…) |
+| `job_industry` | str | Ngành nghề |
+| `experience_level` | str | Yêu cầu kinh nghiệm |
+| `education_level` | str | Yêu cầu học vấn |
+| `job_position` | str | Cấp bậc vị trí |
+| `job_description` | str | Mô tả công việc |
+| `benefits` | str | Quyền lợi |
+| `requirements` | str | Yêu cầu ứng viên |
+| `year` | int | Năm đăng (2022–2026) |
+
+---
+
+## 4. Thành viên nhóm & phân công
+
+> *(Cập nhật tên + MSSV thành viên và phân công nhiệm vụ trước khi nộp.)*
+
+| STT | Họ và tên | MSSV | Nhiệm vụ |
+|-----|-----------|------|----------|
+| 1   |           |      |          |
+| 2   |           |      |          |
+| 3   |           |      |          |
+
+---
+
+## 5. Ghi chú khi nộp bài
+
+- Kiểm tra file `report/BaoCao.pdf` **giống 100%** bản in nộp đầu giờ thi (bookmark, mục lục, định dạng).
+- **Không đưa mã nguồn vào quyển báo cáo.** Độ dài 15–20 trang (không kể mục lục & TLTK).
+- Đóng gói toàn bộ thư mục theo tên `09 - Dự đoán mức lương kỳ vọng dựa trên bản mô tả công việc (Job Description)` rồi upload qua link GV gửi trên MS Teams **lúc 21h ngày 26/5/2026** (đóng link 21h15).
