@@ -1,0 +1,140 @@
+<mxfile host="app.diagrams.net" agent="manual">
+  <diagram name="Pipeline" id="pipeline_overview">
+    <mxGraphModel dx="1084" dy="592" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="src" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=center;verticalAlign=middle;fontSize=12;" value="&lt;b&gt;Nguồn dữ liệu&lt;/b&gt;&lt;br&gt;HuggingFace: tinixai/vietnamese-job-descriptions&lt;br&gt;606,878 JD × 14 cột (Parquet ~293 MB)" vertex="1">
+          <mxGeometry height="60" width="460" x="220" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="s0" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=center;verticalAlign=middle;fontSize=12;" value="&lt;b&gt;Stage 0 — Tải + Split 80/20&lt;/b&gt; (random_state=42)&lt;br&gt;notebooks/_download_and_split.py" vertex="1">
+          <mxGeometry height="50" width="460" x="220" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=left;verticalAlign=middle;fontSize=11;spacingLeft=10;" value="&lt;b&gt;Stage 1 — EDA&lt;/b&gt; (01_EDA.ipynb)&lt;br&gt;• Khảo sát phân phối lương, KN, vùng, ngành&lt;br&gt;• Phát hiện sentinel ‘-999tr’, junk bucket years_exp=9&lt;br&gt;• Đề xuất 3 hàm parse" vertex="1">
+          <mxGeometry height="80" width="460" x="220" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=left;verticalAlign=middle;fontSize=11;spacingLeft=10;" value="&lt;b&gt;Stage 2 — Cleaning&lt;/b&gt; (02_Cleaning.ipynb)&lt;br&gt;• Parse expected_salary (4 regex pattern, drop &gt;100tr)&lt;br&gt;• Parse years_exp (rule junk detection: n&lt;500 &amp;amp; pos_missing&gt;0.5)&lt;br&gt;• Parse province (regex 2 lớp: 63 tỉnh + district→HCM/HN)&lt;br&gt;• industries_list multi-label (top-50 ngành + Other)&lt;br&gt;• Chuẩn hoá categorical + text" vertex="1">
+          <mxGeometry height="120" width="460" x="220" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=left;verticalAlign=middle;fontSize=11;spacingLeft=10;" value="&lt;b&gt;Stage 3 — Feature Engineering&lt;/b&gt; (03_Feature_Engineering.ipynb)&lt;br&gt;• Numeric: impute median + StandardScaler → 2 cột&lt;br&gt;• One-hot: 4 cột categorical → 94 cột&lt;br&gt;• Multi-label industries → 51 cột&lt;br&gt;• TF-IDF: job_title (1,2)gram 5k + 3 cột text dài (1,1) 27k&lt;br&gt;→ hstack thành ma trận sparse 32,107 cột" vertex="1">
+          <mxGeometry height="110" width="460" x="220" y="690" as="geometry" />
+        </mxCell>
+        <mxCell id="fe_tr" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;align=center;fontSize=11;" value="&lt;b&gt;X_train.npz&lt;/b&gt; (sparse CSR)&lt;br&gt;459k × 32k, density 0.64%" vertex="1">
+          <mxGeometry height="60" width="220" x="180" y="840" as="geometry" />
+        </mxCell>
+        <mxCell id="fe_te" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;align=center;fontSize=11;" value="&lt;b&gt;X_test.npz&lt;/b&gt; (sparse CSR)&lt;br&gt;115k × 32k" vertex="1">
+          <mxGeometry height="60" width="220" x="500" y="840" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=left;verticalAlign=middle;fontSize=11;spacingLeft=10;" value="&lt;b&gt;Stage 4 — Modeling&lt;/b&gt; (04_Modeling.ipynb)&lt;br&gt;Stratified 150k sample (theo ngành đầu) → CV chọn hyperparam&lt;br&gt;• 5-fold cho Ridge (grid α) + Lasso-SGD (grid α)&lt;br&gt;• 3-fold × Optuna 15-trial (TPE + Hyperband) cho LightGBM&lt;br&gt;→ Refit best hyperparam trên FULL train (459k) → evaluate test 1 lần" vertex="1">
+          <mxGeometry height="100" width="460" x="220" y="940" as="geometry" />
+        </mxCell>
+        <mxCell id="m_base" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=center;verticalAlign=middle;fontSize=10;" value="Baseline&lt;br&gt;group-mean&lt;br&gt;&lt;b&gt;MAE 3.93&lt;/b&gt;" vertex="1">
+          <mxGeometry height="60" width="130" x="60" y="1080" as="geometry" />
+        </mxCell>
+        <mxCell id="m_ridge" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=center;verticalAlign=middle;fontSize=10;" value="Ridge&lt;br&gt;α=10&lt;br&gt;&lt;b&gt;MAE 2.57&lt;/b&gt;" vertex="1">
+          <mxGeometry height="60" width="130" x="200" y="1080" as="geometry" />
+        </mxCell>
+        <mxCell id="m_lasso" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=center;verticalAlign=middle;fontSize=10;" value="Lasso-SGD&lt;br&gt;α=1e-5&lt;br&gt;&lt;b&gt;MAE 2.67&lt;/b&gt;" vertex="1">
+          <mxGeometry height="60" width="130" x="340" y="1080" as="geometry" />
+        </mxCell>
+        <mxCell id="m_lgbm" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;align=center;verticalAlign=middle;fontSize=10;fontStyle=1;" value="&lt;b&gt;★ LightGBM&lt;/b&gt;&lt;br&gt;Optuna best&lt;br&gt;&lt;b&gt;MAE 2.20&lt;/b&gt;" vertex="1">
+          <mxGeometry height="60" width="130" x="480" y="1080" as="geometry" />
+        </mxCell>
+        <mxCell id="m_ens" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=center;verticalAlign=middle;fontSize=10;" value="Ensemble&lt;br&gt;weighted&lt;br&gt;MAE 2.40&lt;br&gt;&lt;i&gt;(không cải thiện)&lt;/i&gt;" vertex="1">
+          <mxGeometry height="60" width="170" x="620" y="1080" as="geometry" />
+        </mxCell>
+        <mxCell id="result" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;" value="&lt;b&gt;KẾT QUẢ — Mô hình triển khai: LightGBM&lt;/b&gt;&lt;br&gt;Test (114,773 JD): MAE = 2.20 triệu | RMSE = 4.10 | R² = 0.63&lt;br&gt;Cải thiện 44% so với baseline group-mean" vertex="1">
+          <mxGeometry height="70" width="540" x="180" y="1190" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="src" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;" target="s0">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2a" edge="1" parent="1" source="s0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="290" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2b" edge="1" parent="1" source="s0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="610" y="210" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3a" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;" target="s1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="290" y="270" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3b" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;" target="s1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="610" y="270" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="s1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;" target="s2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5a" edge="1" parent="1" source="s2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="290" y="590" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5b" edge="1" parent="1" source="s2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="610" y="590" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6a" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;" target="s3">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="290" y="650" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e6b" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;" target="s3">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="610" y="650" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e7a" edge="1" parent="1" source="s3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;" target="fe_tr">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7b" edge="1" parent="1" source="s3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;" target="fe_te">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8a" edge="1" parent="1" source="fe_tr" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;" target="s4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8b" edge="1" parent="1" source="fe_te" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#666666;" target="s4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9_base" edge="1" parent="1" source="s4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#999999;dashed=1;" target="m_base">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9_ridge" edge="1" parent="1" source="s4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#999999;dashed=1;" target="m_ridge">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9_lasso" edge="1" parent="1" source="s4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#999999;dashed=1;" target="m_lasso">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9_lgbm" edge="1" parent="1" source="s4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#10739e;strokeWidth=2;" target="m_lgbm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9_ens" edge="1" parent="1" source="s4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#999999;dashed=1;" target="m_ens">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="m_lgbm" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;endArrow=classic;endFill=1;strokeColor=#10739e;strokeWidth=2;" target="result">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Fkj02uaV4ZSWyM-NPbzk-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b style=&quot;font-size: 11px;&quot;&gt;raw_data_train.csv&lt;/b&gt;&lt;br style=&quot;font-size: 11px;&quot;&gt;&lt;span style=&quot;font-size: 11px;&quot;&gt;485,502 dòng × 14 cột&lt;/span&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="230" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="Fkj02uaV4ZSWyM-NPbzk-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b style=&quot;font-size: 11px;&quot;&gt;raw_data_test.csv&lt;/b&gt;&lt;br style=&quot;font-size: 11px;&quot;&gt;&lt;span style=&quot;font-size: 11px;&quot;&gt;121,376 dòng × 14 cột&lt;/span&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="550" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="Fkj02uaV4ZSWyM-NPbzk-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b style=&quot;font-size: 11px;&quot;&gt;clean_data_train.csv&lt;/b&gt;&lt;br style=&quot;font-size: 11px;&quot;&gt;&lt;span style=&quot;font-size: 11px;&quot;&gt;458,568 dòng (94.45%)&lt;/span&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="220" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="Fkj02uaV4ZSWyM-NPbzk-5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="&lt;b style=&quot;font-size: 11px;&quot;&gt;clean_data_test.csv&lt;/b&gt;&lt;br style=&quot;font-size: 11px;&quot;&gt;&lt;span style=&quot;font-size: 11px;&quot;&gt;114,773 dòng (94.56%)&lt;/span&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="550" y="590" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

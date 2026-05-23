@@ -8,16 +8,29 @@
 
 - **Môn học:** Khoa học Dữ liệu (KHDL), năm học 2025–2026.
 - **Nhóm:** 09.
-- **Đề tài (số 2):** *Dự đoán mức lương kỳ vọng dựa trên bản mô tả công việc (Job Description).*
-- **Output (target):** `expected_salary = (lương_min + lương_max) / 2` (đơn vị triệu VNĐ).
-- **Input:** tất cả các trường còn lại trong dataset.
-- **Dataset:** [tinixai/vietnamese-job-descriptions](https://huggingface.co/datasets/tinixai/vietnamese-job-descriptions) — 606,878 dòng × 14 cột, Parquet ~293 MB. Đã được split 80/20 (random_state=42) thành `raw_data_{train,test}.csv`.
+- **Đề tài (số 2 — phiên bản cập nhật ngày 2026-05-23):** *Phân cụm bộ dữ liệu việc làm Việt Nam.*
+- **Loại bài toán:** **Clustering** (unsupervised). KHÔNG còn là regression như đề ban đầu.
+- **Input:** **toàn bộ dataset** (kể cả cột `salary` — giờ là feature, không phải target).
+- **Output yêu cầu của GV:**
+  1. Số cụm và hiệu suất phân cụm (dùng các metric phổ biến: silhouette, Davies-Bouldin, Calinski-Harabasz, inertia/elbow).
+  2. Các thuộc tính chung (phổ biến) của các phần tử thuộc mỗi cụm.
+  3. Dựa vào (2), **tự gán nhãn** cho mỗi cụm (vd. "IT mid-level HCM", "Sales junior toàn quốc", v.v.).
+- **Dataset:** [tinixai/vietnamese-job-descriptions](https://huggingface.co/datasets/tinixai/vietnamese-job-descriptions) — 606,878 dòng × 14 cột, Parquet ~293 MB. Phải dùng **TOÀN BỘ dataset** (yêu cầu của GV cho dataset TINIX có sẵn).
+- **Tỉ lệ split (theo template báo cáo `Mau tieu luan KHDL_2026.docx`):** **90/10** (train/test, random_state=42).
+  - Train (~546k dòng): dùng để huấn luyện và lựa chọn mô hình (số cụm, hyperparam clustering).
+  - Test (~61k dòng): với bài clustering, **chỉ random 10 mẫu** trong test để demo kết quả thuật toán phân cụm (gán nhãn cụm, hiển thị nội dung job tương ứng). Không dùng test để đánh giá metric.
+  - ⚠️ **Hiện tại file CSV đang split 80/20** (cho đề cũ) — cần re-split lại bằng `_download_and_split.py`.
+- **TLTK GV gợi ý:**
+  - Phần 2.2 (Phân cụm) của bài giảng môn học (link Drive trong [đề bài cập nhật](./2026_MS%20Teams-TB%20nộp%20tiểu%20luận%20cuối%20kỳ_23.15(2).docx.md)).
+  - [GeeksforGeeks — Clustering in Machine Learning](https://www.geeksforgeeks.org/machine-learning/clustering-in-machine-learning/).
+
+> **Lịch sử:** Đề ban đầu (file [...23.15.docx.md](./2026_MS%20Teams-TB%20nộp%20tiểu%20luận%20cuối%20kỳ_23.15.docx.md)) là *"Dự đoán mức lương kỳ vọng dựa trên JD"* (regression). GV update đề ngày 23/5/2026 thành clustering. Code stage 1–4 hiện tại được thiết kế cho regression — đang **migrate sang clustering từng bước**, EDA là bước đầu.
 
 ---
 
 ## 2. Quy tắc nộp bài (BẮT BUỘC — vi phạm = 0 điểm)
 
-Trích từ thông báo cuối kỳ ([2026_MS Teams-TB nộp tiểu luận cuối kỳ_23.15.docx.md](./2026_MS%20Teams-TB%20nộp%20tiểu%20luận%20cuối%20kỳ_23.15.docx.md)):
+Trích từ thông báo cập nhật ([2026_MS Teams-TB nộp tiểu luận cuối kỳ_23.15(2).docx.md](./2026_MS%20Teams-TB%20nộp%20tiểu%20luận%20cuối%20kỳ_23.15(2).docx.md)):
 
 ### 2.1 Hạn
 
@@ -28,7 +41,9 @@ Trích từ thông báo cuối kỳ ([2026_MS Teams-TB nộp tiểu luận cuố
 | Link upload bài đóng | **21h15 ngày 26/5/2026** (chỉ 15 phút) |
 | Bản in báo cáo nộp | đầu buổi thi |
 
-### 2.2 Folder bài nộp (đặt tên: `09 - Dự đoán mức lương kỳ vọng dựa trên bản mô tả công việc (Job Description)`)
+### 2.2 Folder bài nộp
+
+Quy tắc đặt tên: `STTnhom - Tên đề tài` (vd. `09 - Phân cụm bộ dữ liệu việc làm Việt Nam`).
 
 Phải chứa đủ:
 
@@ -50,6 +65,7 @@ Phải chứa đủ:
 
 - Trình bày tối đa 15 phút.
 - Tập trung vào **đặc tính dữ liệu** và **nhận xét/lý giải** kèm bảng + đồ thị.
+- Đặc biệt: nhấn vào **so sánh các thuật toán phân cụm**, **các metric đánh giá**, và **diễn giải nhãn cụm**.
 - Mang sẵn **2–3 máy tính** phòng sự cố.
 
 ---
@@ -58,48 +74,52 @@ Phải chứa đủ:
 
 ```
 09 - Dự đoán mức lương kỳ vọng dựa trên bản mô tả công việc (Job Description)/
+                                              ↑ tên folder sẽ đổi thành
+                                              "09 - Phân cụm bộ dữ liệu việc làm Việt Nam"
+                                              khi nộp bài (user tự đổi)
 ├── CLAUDE.md                                    ← file này
-├── README.md                                    ← hướng dẫn chạy (cho người chấm)
-├── 2026_MS Teams-TB nộp tiểu luận cuối kỳ_23.15.docx.md
+├── README.md                                    ← hướng dẫn chạy (cho người chấm) — CẦN VIẾT LẠI cho clustering
+├── 2026_MS Teams-TB nộp tiểu luận cuối kỳ_23.15.docx.md      ← đề CŨ (regression) — lưu lại để tham chiếu
+├── 2026_MS Teams-TB nộp tiểu luận cuối kỳ_23.15(2).docx.md   ← đề MỚI (clustering) — chuẩn
 ├── Mau tieu luan KHDL_2026.docx                 ← template báo cáo của GV
 ├── .gitignore
 │
 ├── raw_data/                                    ← .gitignore (1.5+ GB)
-│   ├── data.parquet                             (file gốc tải về)
-│   ├── raw_data_train.csv                       (485,502 dòng × 14 cột, 982 MB)
-│   └── raw_data_test.csv                        (121,376 dòng × 14 cột, 246 MB)
+│   ├── data.parquet                             (file gốc tải về — toàn bộ 606,878 dòng)
+│   ├── raw_data_train.csv                       ⚠️ HIỆN ĐANG SAI: 485k (80%) — phải re-split thành 90% (~546,190 dòng)
+│   └── raw_data_test.csv                        ⚠️ HIỆN ĐANG SAI: 121k (20%) — phải re-split thành 10% (~60,688 dòng)
 │
-├── clean_data/                                  ← .gitignore (~1 GB)
-│   ├── clean_data_train.csv                     (458,568 dòng × 14 cột, 845 MB)
-│   └── clean_data_test.csv                      (114,773 dòng × 14 cột, 211 MB)
+├── clean_data/                                  ← .gitignore — SẼ REBUILD theo schema clustering
+│   ├── clean_data_train.csv                     (~458k dòng, schema mới)
+│   └── clean_data_test.csv                      (~114k dòng, schema mới)
 │
-├── features/                                    ← .gitignore (~570 MB)
-│   ├── X_train.npz                              (458,568 × 32,107 sparse CSR, 456 MB)
-│   ├── X_test.npz                               (114,773 × 32,107 sparse CSR, 114 MB)
-│   ├── y_train.npy / y_test.npy                 log1p(expected_salary)
-│   ├── transformers.joblib                      dict: num_imputer, num_scaler, ohe, mlb, tfidf
+├── features/                                    ← .gitignore — SẼ REBUILD
+│   ├── X_train.npz / X_test.npz                 sparse CSR (số chiều tuỳ stage 3 mới)
+│   ├── X_train_svd.npy / X_test_svd.npy         ← MỚI: dense sau TruncatedSVD (~50–100 chiều) để clustering
+│   ├── transformers.joblib                      dict: num_imputer, num_scaler, ohe, mlb, tfidf, svd
 │   ├── meta.json                                groups (column ranges) + tham số
-│   └── feature_names.txt                        32,107 dòng tên feature
+│   └── feature_names.txt                        tên feature
 │
-├── models/                                      ← .gitignore (sinh từ stage 4)
-│   ├── lgbm_best.txt, lgbm_no_year.txt          LightGBM native (Unicode-safe save)
-│   ├── ridge_final.joblib, sgd_final.joblib     sklearn pickled
-│   ├── predictions_test.csv                     8 cột (actual + 7 model preds)
-│   ├── metrics.csv                              bảng MAE/RMSE/R²
-│   ├── hyperparams.json                         best params + ensemble weights
-│   └── optuna_trials.json                       full Optuna trial log
+├── models/                                      ← .gitignore — SẼ REBUILD (clustering artifacts)
+│   ├── kmeans_best.joblib                       MiniBatchKMeans tốt nhất
+│   ├── gmm_best.joblib                          GaussianMixture (nếu chọn)
+│   ├── hdbscan_best.joblib                      HDBSCAN (nếu chọn)
+│   ├── labels_train.npy / labels_test.npy       nhãn cụm cho mỗi dòng
+│   ├── cluster_profiles.csv                     bảng mô tả mỗi cụm (mean/mode mỗi feature)
+│   ├── cluster_names.json                       nhãn tự gán cho mỗi cụm
+│   ├── metrics.csv                              silhouette / DB / CH theo k
+│   └── plots/                                   elbow, silhouette curve, t-SNE/UMAP visualization
 │
-├── pyproject.toml                               ← uv dep manifest (pandas, sklearn, lightgbm, optuna…)
+├── pyproject.toml                               ← uv dep manifest
 ├── .python-version                              3.12
 ├── uv.lock                                      reproducibility snapshot
 │
 ├── notebooks/
 │   ├── _download_and_split.py                   ← tái tạo raw_data từ HuggingFace
-│   ├── _build_03.py, _build_04.py               ← builder (gitignore, nbformat)
-│   ├── 01_EDA.ipynb                             ✅ ĐÃ XONG
-│   ├── 02_Cleaning.ipynb                        ✅ ĐÃ XONG
-│   ├── 03_Feature_Engineering.ipynb             ✅ ĐÃ XONG (32k features)
-│   └── 04_Modeling.ipynb                        ⏳ đang chạy (Optuna LGBM refit full)
+│   ├── 01_EDA.ipynb                             ✅ ĐÃ XONG (regression) → ⚠️ CẦN SỬA narrative + cleaning rule
+│   ├── 02_Cleaning.ipynb                        ⚠️ CẦN SỬA: salary thành feature, không drop dòng không parse được
+│   ├── 03_Feature_Engineering.ipynb             ⚠️ CẦN SỬA: bỏ y, thêm TruncatedSVD
+│   └── 04_Modeling.ipynb                        ❌ VIẾT LẠI HOÀN TOÀN: regression → clustering
 │
 ├── report/                                      ← để PDF báo cáo cuối cùng
 └── slide/                                       ← để PDF slide cuối cùng
@@ -107,70 +127,71 @@ Phải chứa đủ:
 
 ---
 
-## 4. Pipeline 4 stage
+## 4. Pipeline 4 stage (đã chuyển sang clustering)
 
 | # | Notebook | Input | Output | Trạng thái |
 |---|---|---|---|---|
-| 1 | `01_EDA.ipynb` | `raw_data/raw_data_{train,test}.csv` | Biểu đồ + nhận xét + 3 hàm parse | ✅ |
-| 2 | `02_Cleaning.ipynb` | `raw_data/raw_data_{train,test}.csv` | `clean_data/clean_data_{train,test}.csv` | ✅ |
-| 3 | `03_Feature_Engineering.ipynb` | `clean_data/clean_data_{train,test}.csv` | `features/X_*.npz` (32k cột), `y_*.npy`, `transformers.joblib`, `meta.json` | ✅ |
-| 4 | `04_Modeling.ipynb` | `features/*` | `models/*.txt/joblib/csv/json`, plots, ensemble | ⏳ đang chạy |
+| 1 | `01_EDA.ipynb` | `raw_data/raw_data_{train,test}.csv` | Biểu đồ + nhận xét + 3 hàm parse + phát hiện trục cluster tiềm năng | ⚠️ Sửa narrative + 1 quyết định cleaning |
+| 2 | `02_Cleaning.ipynb` | `raw_data/raw_data_{train,test}.csv` | `clean_data/clean_data_{train,test}.csv` (salary là feature, không drop dòng) | ⚠️ Sửa |
+| 3 | `03_Feature_Engineering.ipynb` | `clean_data/clean_data_{train,test}.csv` | Sparse CSR + **TruncatedSVD dense ~50–100 chiều** | ⚠️ Sửa: bỏ `y`, thêm SVD |
+| 4 | `04_Modeling.ipynb` | `features/*` | Clustering artifacts (xem mục models/ ở Section 3) | ❌ Viết lại |
 
 ---
 
-## 5. Các quyết định thiết kế đã chốt (KHÔNG đổi nếu không bàn lại)
+## 5. Các quyết định thiết kế đã chốt cho **phiên bản clustering** (KHÔNG đổi nếu không bàn lại)
 
-### Target `expected_salary`
-- Parse từ cột `salary` qua **4 regex pattern**: `vnd_range_dotted`, `vnd_range_month`, `vnd_single_dotted`, `usd_range`.
+### `salary` — giờ là FEATURE, không phải target
+- Parse từ cột `salary` qua **4 regex pattern** (giữ nguyên từ EDA): `vnd_range_dotted`, `vnd_range_month`, `vnd_single_dotted`, `usd_range`.
 - USD → VND theo tỉ giá `25,000`.
-- **Drop dòng có `expected_salary > 100 triệu`** (junk; pattern `... -999.000.000 VND` là sentinel max). KHÔNG cap/clip.
-- **Modeling target = `log1p(expected_salary)`** (sẽ làm ở stage 4, không lưu vào clean_data).
+- **Tách thành 3 feature numeric:** `salary_min`, `salary_max`, `salary_mid` (= `(min+max)/2`).
+- **Outlier handling:**
+  - DROP dòng có sentinel `... -999.000.000 VND` (33 dòng — junk thật).
+  - DROP dòng `salary_mid > 100M` không sentinel (~609 dòng — outlier scale, sẽ phá K-Means/StandardScaler).
+- **Dòng không parse được** (`"Đang cập nhật"`, `"Thoả thuận"`, `"0 VND"`, ...): **GIỮ LẠI**. Đánh dấu `salary_missing = True` (binary flag), 3 cột numeric → NaN, stage 3 impute median.
 
 ### `years_exp` (từ `experience_level`)
 - Bản chất là **numeric** (số năm KN), không phải ordinal categorical.
 - Regex `(\d+)\s*năm`; `"Dưới 1 năm"` → `0.5`; `"Không"`/`"Chưa cập nhật"` → `NaN`.
-- **Detect junk bucket rule-based:** `n_rows < 500` AND `pos_missing_rate > 0.5` → set `years_exp = NaN`. Đã phát hiện và xoá bucket `9.0` tự động (225 dòng có position 99.6% missing).
+- **Detect junk bucket rule-based:** `n_rows < 500` AND `pos_missing_rate > 0.5` → set `years_exp = NaN`. Đã phát hiện bucket `9.0` (228 dòng, position 99.6% missing).
 
 ### `province` (từ `location`)
 - Regex **2 lớp**: (1) match 63 tỉnh/thành; (2) fallback tra district→province cho HCM & Hà Nội.
-- Không match → `'Other'`. Coverage hiện tại: **93.84%** train, 93.82% test.
-- **Có thể cải thiện** bằng cách mở rộng `DISTRICT_TO_PROVINCE` cho các tỉnh khác (HP, ĐN, Cần Thơ…).
+- Không match → `'Other'`. Coverage hiện tại: **~94%** train, ~94% test.
 
 ### `industries_list` (từ `job_industry`)
 - **Multi-label**, tách dấu `/`. Top-50 ngành base + `'Other'`. Cover 99.97%.
 - Lưu vào CSV dạng chuỗi pipe-separated, vd. `"Bán hàng - Kinh doanh|Marketing"`.
-- **KHÔNG tách dấu `-`** — các tên ghép như `"Khoa học - Kỹ thuật"`, `"Điện - Điện tử - Điện lạnh"` là tên ngành do publisher đặt, không phải nhiều ngành.
+- **KHÔNG tách dấu `-`**.
 
 ### Categorical ngắn (`education_level`, `job_type`, `job_position`)
 - `lower().strip()`; thiếu/empty → `'unknown'`.
 
 ### Text dài (`job_title`, `company_name`, `job_description`, `requirements`, `benefits`)
-- `strip()`; NaN → `''`. **Không lowercase ở stage 2** — để stage 3 vectorizer xử lý.
+- `strip()`; NaN → `''`.
 
 ### `year`
-- Giữ nguyên numeric. Lạm phát 2022–2026 **không deflate** trong cleaning.
-- Stage 4 sẽ train **2 model pair-wise** (có `year` vs không `year`) để báo cáo nhận xét.
+- Giữ nguyên numeric.
 
-### Text features (stage 3)
-- TF-IDF **riêng từng cột** (`job_title`, `job_description`, `requirements`, `benefits`) rồi `hstack`. Không concat trước rồi vectorize 1 lần.
-- 2 bộ params: **`job_title`** (text ngắn) max=5k, **ngram=(1,2)** bigram, min_df=5; còn lại (text dài) max=10k, unigram, min_df=10.
-- Numeric scaler: **`StandardScaler()`** (with_mean=True) — center cả 2 cột. Trước đây dùng `with_mean=False` gây bug `year` scale ~1730 làm SGD/Lasso diverge → đã sửa.
+### Feature engineering (stage 3) — schema mới
+- TF-IDF riêng từng cột text + OHE categorical + multi-hot industries + numeric impute median + StandardScaler.
+- **MỚI:** sau khi `hstack` thành sparse CSR ~30k chiều, áp **TruncatedSVD** (n_components=50–100, random_state=42) để giảm xuống dense matrix. Lưu thêm `X_*_svd.npy`. Lý do: K-Means/silhouette **không scale** với sparse 30k chiều.
+- KHÔNG có `y` nữa.
 
-### Training (stage 4)
-- **Stratified sample 150k** từ train (tầng theo `first_industry`) cho CV chọn hyperparam.
-- **5 model:** Baseline (group-mean) | Ridge (5-fold CV, alpha grid) | Lasso-SGD (5-fold CV, alpha grid) | LightGBM (**Optuna 15-trial TPE + Hyperband pruner, 3-fold CV**) | Ensemble (weighted average 1/MAE của Ridge+Lasso+LightGBM).
-- Refit best hyperparam trên FULL train (~459k) → evaluate test (114k) đúng 1 lần.
-- Metric: MAE, RMSE, R² ở thang triệu VNĐ (sau `expm1`).
-- Year ablation: zero cột year trong CSR (`tocsc` + zero data + `tocsr`) → refit LightGBM với cùng best_params.
-- LightGBM save dùng `model_to_string()` + Python write (Unicode-safe path).
-
-### Kết quả thực tế (đã chạy, ngày 2026-05-23)
-- Ridge (α=10): Test MAE = **2.573 triệu**, R²(M) = 0.543
-- Lasso-SGD (α=1e-5): Test MAE = **2.668 triệu**, nnz = 3,614 / 32,107 (11.3%)
-- LightGBM Optuna (best CV MAE = **2.382 triệu**): num_leaves=125 (chạm trần range), lr=0.068, min_child_samples=98, feature_fraction=0.607
-- Optuna: 15 trial / 185.7 phút / 6 pruned (40%)
-- ⏳ LightGBM refit full + year ablation + ensemble: chưa xong (đang chạy cell 19)
-- Kỳ vọng: LightGBM test MAE ~2.30, Ensemble ~2.25
+### Clustering (stage 4) — pipeline mới
+- **Trên dữ liệu SVD-reduced.** Có thể normalize L2 để dùng cosine similarity ngầm trên K-Means.
+- **Tìm `k` tối ưu:** elbow (inertia) + silhouette curve cho `k ∈ [3, 20]`. Vì 458k dòng → silhouette sample 30k–50k rows.
+- **Thuật toán so sánh (chọn ≥ 2):**
+  - `MiniBatchKMeans` (baseline scale tốt, deterministic với `random_state=42`).
+  - `GaussianMixture` (soft clustering, BIC/AIC để chọn k).
+  - `HDBSCAN` (density-based, không cần định k trước).
+- **Metric đánh giá:** silhouette, Davies-Bouldin, Calinski-Harabasz, inertia.
+- **Mô tả cụm:** với mỗi cluster:
+  - Top-5 industries, top job_position, top province, top education.
+  - Mean/median salary, mean years_exp, year distribution.
+  - Top TF-IDF tokens (centroid trong SVD space → inverse_transform → top words).
+- **Gán nhãn cụm:** thủ công sau khi xem profile (vd. *"IT mid-level HCM"*, *"Manufacturing Bắc Bộ junior"*).
+- **Visualization:** t-SNE hoặc UMAP từ SVD space → 2D scatter colored by cluster label.
+- **Demo trên test (yêu cầu của template báo cáo):** sau khi đã chọn được model + nhãn cụm cuối cùng, random 10 mẫu từ test set, predict cluster, hiển thị: cluster_id, nhãn cụm, một số trường chính (`job_title`, `salary`, `province`, `industries_list`, `years_exp`, `education_level`). Đây là phần demo trong báo cáo/slide.
 
 ---
 
@@ -179,14 +200,14 @@ Phải chứa đủ:
 - **Ngôn ngữ:** mọi markdown + comment trong notebook viết **tiếng Việt có dấu**.
 - **Style code:** clean code — không bịa hàm placeholder, không over-comment, function < 30 dòng nếu có thể.
 - **Random state:** luôn `42` xuyên suốt.
-- **Cột tạm trong EDA:** prefix `_` (`_salary_M`, `_years_exp`, `_province`, `_pattern`). Cột chính thức trong clean_data: không prefix.
-- **Không leak:** mọi tham số fit trên train, áp dụng nguyên cho test (junk_buckets, TOP_INDUSTRIES…).
-- **Notebook structure:** mỗi notebook = section đánh số (1, 2, 3…), mỗi section có markdown header trước cell code, có in stats/diagnostic sau bước biến đổi quan trọng.
+- **Cột tạm trong EDA:** prefix `_` (`_salary_mid_M`, `_years_exp`, `_province`, `_pattern`). Cột chính thức trong clean_data: không prefix.
+- **Không leak:** mọi tham số fit trên train, áp dụng nguyên cho test (junk_buckets, TOP_INDUSTRIES, scaler, SVD, KMeans centroids...).
+- **Notebook structure:** mỗi notebook = section đánh số (1, 2, 3...), mỗi section có markdown header trước cell code, có in stats/diagnostic sau bước biến đổi quan trọng.
 
 ### Cách tái tạo dữ liệu
 ```powershell
 # Cài dependencies:
-pip install pandas pyarrow scikit-learn requests matplotlib seaborn jupyter nbformat nbconvert
+pip install pandas pyarrow scikit-learn requests matplotlib seaborn jupyter nbformat nbconvert hdbscan umap-learn
 
 # Tải raw data:
 python notebooks/_download_and_split.py
@@ -195,41 +216,40 @@ python notebooks/_download_and_split.py
 jupyter nbconvert --to notebook --execute notebooks/02_Cleaning.ipynb --output notebooks/02_Cleaning.ipynb
 ```
 
-### Cách rebuild notebook nếu bị hỏng (chưa có script builder hiện tại)
-Các notebook 01 và 02 đã được sinh bằng builder script tạm (`_build_*.py`) và đã bị xoá sau khi tạo notebook. Nếu cần edit lớn → edit trực tiếp .ipynb qua VS Code hoặc dùng nbformat.
-
 ---
 
 ## 7. Lưu ý quan trọng cho Claude (phiên chat mới)
 
-- **Memory caution:** load full `raw_data_train.csv` (982 MB) + nhiều cột derived rất tốn RAM (~3–5 GB). Tránh `.copy()` toàn DataFrame; dùng `df.loc[mask].groupby(...)` thay vì `df.dropna(...).copy()`.
+- **Đề đã đổi từ regression sang clustering** (xem Section 1). Mọi reference đến "target", "y", "MAE", "R²", "Ridge/Lasso/LightGBM" trong code cũ đều cần xem xét lại trước khi giữ.
+- **Memory caution:** load full `raw_data_train.csv` (982 MB) + nhiều cột derived rất tốn RAM (~3–5 GB). Tránh `.copy()` toàn DataFrame.
 - **Encoding:** Windows console mặc định cp1252 không in được tiếng Việt — luôn set `$env:PYTHONIOENCODING = "utf-8"` trước khi chạy python qua PowerShell.
 - **Không tự ý sửa data flow** đã chốt ở Section 5 — bàn lại với user nếu thấy cần đổi.
-- **Confirm trước khi push/PR/destructive op** — user đã có remote `git@github.com:anhquan1111/khdl-vietnam-salary-prediction.git` (branch `master`).
-- **Đừng commit `raw_data/` hay `clean_data/`** — đã gitignore, tổng > 2 GB.
+- **Confirm trước khi push/PR/destructive op** — user đã có remote `git@github.com:anhquan1111/khdl-vietnam-salary-prediction.git` (branch `master`). Lưu ý: tên repo có chữ "salary-prediction" — sẽ đổi sau khi user xong việc đăng ký.
+- **Đừng commit `raw_data/` hay `clean_data/` hay `features/` hay `models/`** — đã gitignore, tổng > 2 GB.
 - **`_*.py` trong notebooks/** là script tạm (builder, fix), prefix `_` để dễ nhận biết và đã được gitignore (trừ `_download_and_split.py` là script tái tạo dữ liệu chính thức).
 
 ---
 
-## 8. Bước tiếp theo (TODO)
+## 8. Bước tiếp theo (TODO — sau khi đổi đề)
 
-- [x] **Stage 3 — Feature Engineering** ([03_Feature_Engineering.ipynb](./notebooks/03_Feature_Engineering.ipynb)) — ✅ done:
-  - `X_train (458568, 27107)` / `X_test (114773, 27107)` sparse CSR, density 0.71%.
-  - Numeric impute median (years_exp=3.0) + StandardScaler(with_mean=False); `r(years_exp, y) = +0.33`, `r(year, y) = +0.07`.
-  - OHE 94 cột, multi-hot industries 51 cột, TF-IDF (10k + 9087 + 7873 = 26,960 cột) với `sublinear_tf=True`, `min_df=10`, `max_df=0.95`.
-  - `y = log1p(expected_salary)`, lưu cùng `features/`. Stage 4 slice cột year qua `meta['groups']['numeric']` để so sánh có/không year.
-- [⏳] **Stage 4 — Modeling** ([04_Modeling.ipynb](./notebooks/04_Modeling.ipynb)) — đang chạy:
-  - ✅ Baseline (group-mean `industry × years_exp`): MAE 3.93
-  - ✅ Ridge CV + refit + test: MAE 2.573 (best α=10)
-  - ✅ Lasso-SGD CV + refit + test: MAE 2.668 (best α=1e-5, 11.3% nonzero coef)
-  - ✅ LightGBM Optuna 15 trial TPE + Hyperband: best CV MAE 2.382
-  - ⏳ LightGBM refit full train (cell 19, đang chạy ~30-60')
-  - ⏳ Year ablation (cell 21)
-  - ⏳ Ensemble weighted (cell 23)
-  - ⏳ Plots (predicted vs actual, residuals, feature importance), per-segment errors, save artifacts
-- [ ] **Báo cáo PDF** (15-20 trang) theo `Mau tieu luan KHDL_2026.docx`. **Không được đưa code vào.** Dùng bảng + đồ thị + prose.
-- [ ] **Slide PDF** ≤ 15 phút — focus đặc tính dữ liệu + bảng so sánh model.
-- [ ] **Đăng ký tên đề tài** trên Google Sheets — **deadline CN 24/5/2026** (gấp!)
-- [ ] **Điền tên + MSSV** vào [README.md](./README.md#L88) — phân công nhiệm vụ trong nhóm.
-- [ ] **In bản cứng báo cáo** — nộp đầu buổi thi (phải khớp 100% với PDF nộp online).
-- [ ] **Chuẩn bị 2-3 máy tính** mang theo phòng sự cố khi trình bày slide.
+### Việc đã làm (đề CŨ — regression)
+- ✅ Stage 1 EDA (regression-flavored — narrative cần đổi)
+- ✅ Stage 2 Cleaning (1 quyết định cần sửa: cách xử lý dòng không parse được salary)
+- ✅ Stage 3 Feature Engineering (32k features sparse — cần thêm SVD)
+- ✅ Stage 4 Modeling regression (Ridge MAE=2.57, LightGBM CV MAE=2.38) — **sẽ KHÔNG dùng cho bài nộp mới**
+
+### Migration sang clustering (đang đi từng bước)
+- [ ] **Stage 0 Re-split** — sửa `_download_and_split.py` từ 80/20 → **90/10** (theo template báo cáo). Re-generate `raw_data_{train,test}.csv`. Số dòng dự kiến: train ~546,190 / test ~60,688.
+- [⏳] **Stage 1 EDA** — đang sửa narrative + quyết định outlier (xem chi tiết trong câu trả lời của Claude trong session này). Re-run sau khi đã re-split để cập nhật số liệu.
+- [ ] **Stage 2 Cleaning** — sửa cách xử lý salary (3 cột feature + flag missing), bỏ logic drop > 100M chỉ giữ drop sentinel + drop > 100M không sentinel.
+- [ ] **Stage 3 Feature Engineering** — bỏ `y = log1p(salary)`, thêm TruncatedSVD step (50–100 chiều), lưu thêm `X_*_svd.npy`.
+- [ ] **Stage 4 Modeling** — viết lại hoàn toàn: MiniBatchKMeans + (GMM hoặc HDBSCAN), elbow + silhouette, cluster profiling, gán nhãn, t-SNE/UMAP plot, **demo 10 mẫu từ test**.
+
+### Việc bên ngoài code (user tự lo)
+- [ ] Đăng ký lại tên đề tài trên Google Sheets — **deadline CN 24/5/2026**.
+- [ ] Đổi tên folder nộp bài thành `09 - Phân cụm bộ dữ liệu việc làm Việt Nam`.
+- [ ] Điền tên + MSSV vào [README.md](./README.md) — phân công nhiệm vụ.
+- [ ] Viết báo cáo PDF (15–20 trang) theo [Mau tieu luan KHDL_2026.docx](./Mau%20tieu%20luan%20KHDL_2026.docx).
+- [ ] Slide PDF ≤ 15 phút.
+- [ ] In bản cứng báo cáo.
+- [ ] Chuẩn bị 2–3 máy tính dự phòng.

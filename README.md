@@ -103,13 +103,13 @@ Sau khi tải, dữ liệu được chia ngẫu nhiên **80% train / 20% test** 
 
 ## 4. Thành viên nhóm & phân công
 
-> *(Cập nhật tên + MSSV thành viên và phân công nhiệm vụ trước khi nộp.)*
+> Mỗi thành viên tự soạn phần báo cáo + slide tương ứng với mảng code mình phụ trách. Nhóm trưởng tổng hợp, biên tập và thống nhất định dạng cuối.
 
 | STT | Họ và tên | MSSV | Nhiệm vụ |
 |-----|-----------|------|----------|
-| 1   |Võ Trần Anh Quân   |      |          |
-| 2   |           |      |          |
-| 3   |           |      |          |
+| 1 | **Võ Trần Anh Quân** (nhóm trưởng) | 102230131 | Notebook `03_Feature_Engineering.ipynb` (TF-IDF + OHE + multi-hot, 32k cột) và `04_Modeling.ipynb` (Baseline / Ridge / Lasso-SGD / LightGBM-Optuna / Ensemble + year ablation). Quản lý repo, README, đóng gói nộp bài. Soạn phần báo cáo + slide cho mảng Feature Engineering và Modeling. Tổng hợp & biên tập báo cáo + slide cuối cùng. |
+| 2 | Phạm Hữu Tuân | 102230139 | Notebook `01_EDA.ipynb` — khảo sát & trực quan hoá (phân phối lương, năm kinh nghiệm, ngành nghề, tỉnh thành) + nhận xét đặc tính dữ liệu. Soạn phần báo cáo + slide cho mảng EDA. |
+| 3 | Trần Việt Toàn | 102230137 | Notebook `02_Cleaning.ipynb` — parse `expected_salary` (4 regex pattern), `years_exp`, `province` (2 lớp regex + district lookup), `industries_list` multi-label, xử lý junk bucket. Soạn phần báo cáo + slide cho mảng tiền xử lý & làm sạch dữ liệu. |
 
 ---
 
