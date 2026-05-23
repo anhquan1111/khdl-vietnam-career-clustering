@@ -3,6 +3,10 @@
 raw_data/
 # Clean data: sinh ra từ notebooks/02_Cleaning.ipynb
 clean_data/
+# Feature matrices: sinh ra từ notebooks/03_Feature_Engineering.ipynb
+features/
+# Model artifacts: sinh ra từ notebooks/04_Modeling.ipynb
+models/
 
 # Output figures (nếu sinh ra)
 figures/

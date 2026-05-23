@@ -73,11 +73,20 @@ Phải chứa đủ:
 │   ├── clean_data_train.csv                     (458,568 dòng × 14 cột, 845 MB)
 │   └── clean_data_test.csv                      (114,773 dòng × 14 cột, 211 MB)
 │
+├── features/                                    ← .gitignore (~530 MB)
+│   ├── X_train.npz                              (458,568 × 27,107 sparse CSR, 425 MB)
+│   ├── X_test.npz                               (114,773 × 27,107 sparse CSR, 106 MB)
+│   ├── y_train.npy / y_test.npy                 log1p(expected_salary)
+│   ├── transformers.joblib                      dict: num_imputer, num_scaler, ohe, mlb, tfidf
+│   ├── meta.json                                groups (column ranges) + tham số
+│   └── feature_names.txt                        27,107 dòng tên feature
+│
 ├── notebooks/
 │   ├── _download_and_split.py                   ← tái tạo raw_data từ HuggingFace
+│   ├── _build_03.py                             ← builder của 03 (gitignore, để tái tạo notebook nếu cần)
 │   ├── 01_EDA.ipynb                             ✅ ĐÃ XONG
 │   ├── 02_Cleaning.ipynb                        ✅ ĐÃ XONG
-│   ├── 03_Feature_Engineering.ipynb             ⏳ skeleton — chưa làm
+│   ├── 03_Feature_Engineering.ipynb             ✅ ĐÃ XONG
 │   └── 04_Modeling.ipynb                        ⏳ skeleton — chưa làm
 │
 ├── report/                                      ← để PDF báo cáo cuối cùng
@@ -92,8 +101,8 @@ Phải chứa đủ:
 |---|---|---|---|---|
 | 1 | `01_EDA.ipynb` | `raw_data/raw_data_{train,test}.csv` | Biểu đồ + nhận xét + 3 hàm parse | ✅ |
 | 2 | `02_Cleaning.ipynb` | `raw_data/raw_data_{train,test}.csv` | `clean_data/clean_data_{train,test}.csv` | ✅ |
-| 3 | `03_Feature_Engineering.ipynb` | `clean_data/clean_data_{train,test}.csv` | `X_train, X_test, y_train, y_test` (in-memory hoặc joblib) | ⏳ |
-| 4 | `04_Modeling.ipynb` | output stage 3 | Bảng so sánh model + nhận xét | ⏳ |
+| 3 | `03_Feature_Engineering.ipynb` | `clean_data/clean_data_{train,test}.csv` | `features/X_*.npz`, `y_*.npy`, `transformers.joblib`, `meta.json` | ✅ |
+| 4 | `04_Modeling.ipynb` | `features/*` | Bảng so sánh model + nhận xét | ⏳ |
 
 ---
 
@@ -179,14 +188,11 @@ Các notebook 01 và 02 đã được sinh bằng builder script tạm (`_build_
 
 ## 8. Bước tiếp theo (TODO)
 
-- [ ] **Stage 3 — Feature Engineering** ([03_Feature_Engineering.ipynb](./notebooks/03_Feature_Engineering.ipynb)):
-  - Đọc `clean_data_*.csv`.
-  - Impute `years_exp` NaN (median hoặc KNN).
-  - One-hot: `province`, `education_level`, `job_type`, `job_position`.
-  - Multi-hot: `industries_list` (split `|` → 50 cột bool).
-  - TF-IDF riêng 3 cột text → hstack.
-  - Compute `y = log1p(expected_salary)`.
-  - (Optional) lưu `X_train, X_test, y_*` thành `.joblib`/`.npz` để stage 4 dùng.
+- [x] **Stage 3 — Feature Engineering** ([03_Feature_Engineering.ipynb](./notebooks/03_Feature_Engineering.ipynb)) — ✅ done:
+  - `X_train (458568, 27107)` / `X_test (114773, 27107)` sparse CSR, density 0.71%.
+  - Numeric impute median (years_exp=3.0) + StandardScaler(with_mean=False); `r(years_exp, y) = +0.33`, `r(year, y) = +0.07`.
+  - OHE 94 cột, multi-hot industries 51 cột, TF-IDF (10k + 9087 + 7873 = 26,960 cột) với `sublinear_tf=True`, `min_df=10`, `max_df=0.95`.
+  - `y = log1p(expected_salary)`, lưu cùng `features/`. Stage 4 slice cột year qua `meta['groups']['numeric']` để so sánh có/không year.
 - [ ] **Stage 4 — Modeling** ([04_Modeling.ipynb](./notebooks/04_Modeling.ipynb)):
   - Baseline: trung bình theo `job_industry × experience_level`.
   - Linear: Ridge/Lasso.

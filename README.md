@@ -37,20 +37,34 @@ Tiểu luận cuối kỳ môn **Khoa học Dữ liệu**, năm học 2025–202
 
 ## 2. Trình tự chạy chương trình
 
-Cần Python ≥ 3.10. Cài thư viện:
+Cần Python ≥ 3.10, < 3.13. Dự án dùng [**uv**](https://docs.astral.sh/uv/) để quản lý dependencies (cài 1 lần, snapshot trong `uv.lock` để tái lập y hệt).
 
 ```powershell
-pip install pandas pyarrow scikit-learn matplotlib seaborn jupyter
+# Nếu chưa có uv:
+#   PowerShell: irm https://astral.sh/uv/install.ps1 | iex
+#   hoặc:       pip install uv
+
+# Cài Python 3.12 (nếu máy chưa có) + tất cả thư viện (pandas, sklearn, lightgbm, jupyter…):
+uv sync
+
+# Mở Jupyter Notebook UI:
+uv run jupyter notebook
+
+# Hoặc chạy 1 notebook end-to-end qua CLI:
+uv run jupyter nbconvert --to notebook --execute notebooks/04_Modeling.ipynb `
+    --output 04_Modeling.ipynb --ExecutePreprocessor.timeout=3600
 ```
+
+`uv sync` tự đọc `pyproject.toml` + tạo `.venv/` + cài đúng version. Lần đầu mất ~1-2 phút, các lần sau gần như tức thì.
 
 Chạy lần lượt 4 notebook theo thứ tự:
 
-| Bước | Notebook                          | Input                                   | Output                              |
-|------|-----------------------------------|-----------------------------------------|-------------------------------------|
-| 1    | `01_EDA.ipynb`                    | `raw_data/raw_data_{train,test}.csv`    | biểu đồ + nhận xét (in-notebook)    |
-| 2    | `02_Cleaning.ipynb`               | `raw_data/raw_data_{train,test}.csv`    | `clean_data/clean_data_{train,test}.csv` |
-| 3    | `03_Feature_Engineering.ipynb`    | `clean_data/clean_data_{train,test}.csv`| ma trận đặc trưng (in-memory)       |
-| 4    | `04_Modeling.ipynb`               | đặc trưng từ bước 3                     | model + bảng kết quả                |
+| Bước | Notebook                          | Input                                   | Output                                                                |
+|------|-----------------------------------|-----------------------------------------|-----------------------------------------------------------------------|
+| 1    | `01_EDA.ipynb`                    | `raw_data/raw_data_{train,test}.csv`    | biểu đồ + nhận xét (in-notebook)                                      |
+| 2    | `02_Cleaning.ipynb`               | `raw_data/raw_data_{train,test}.csv`    | `clean_data/clean_data_{train,test}.csv`                              |
+| 3    | `03_Feature_Engineering.ipynb`    | `clean_data/clean_data_{train,test}.csv`| `features/X_{train,test}.npz`, `y_*.npy`, `transformers.joblib`, `meta.json` |
+| 4    | `04_Modeling.ipynb`               | `features/*`                            | `models/lgbm_best.txt`, `predictions_test.csv`, `metrics.csv` + figures |
 
 **Lưu ý reproducibility:** mọi bước random đều dùng `random_state=42`.
 

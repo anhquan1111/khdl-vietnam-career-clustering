@@ -1,0 +1,33 @@
+[project]
+name = "khdl-vietnam-salary"
+version = "0.1.0"
+description = "Dự đoán mức lương kỳ vọng dựa trên bản mô tả công việc — Nhóm 09 KHDL"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    # Core data
+    "pandas>=2.0",
+    "numpy>=1.24,<2.0",
+    "scipy>=1.10",
+    "pyarrow>=14.0",          # đọc parquet (raw_data từ HuggingFace)
+    # ML
+    "scikit-learn>=1.4",
+    "lightgbm>=4.0",
+    "joblib>=1.3",
+    "optuna>=3.5",            # Bayesian hyperparam tuning cho LightGBM
+    # Visualization
+    "matplotlib>=3.7",
+    "seaborn>=0.13",
+    # Notebook
+    "jupyter>=1.0",
+    "notebook>=7.0",
+    "nbformat>=5.9",
+    "nbconvert>=7.0",
+    "ipykernel>=6.25",
+    # Utility
+    "requests>=2.31",          # cho notebooks/_download_and_split.py
+]
+
+[tool.uv]
+# uv-specific config (optional)
+package = false                # đây là project, không phải package phân phối
