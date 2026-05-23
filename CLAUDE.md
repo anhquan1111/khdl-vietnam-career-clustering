@@ -73,21 +73,33 @@ Phải chứa đủ:
 │   ├── clean_data_train.csv                     (458,568 dòng × 14 cột, 845 MB)
 │   └── clean_data_test.csv                      (114,773 dòng × 14 cột, 211 MB)
 │
-├── features/                                    ← .gitignore (~530 MB)
-│   ├── X_train.npz                              (458,568 × 27,107 sparse CSR, 425 MB)
-│   ├── X_test.npz                               (114,773 × 27,107 sparse CSR, 106 MB)
+├── features/                                    ← .gitignore (~570 MB)
+│   ├── X_train.npz                              (458,568 × 32,107 sparse CSR, 456 MB)
+│   ├── X_test.npz                               (114,773 × 32,107 sparse CSR, 114 MB)
 │   ├── y_train.npy / y_test.npy                 log1p(expected_salary)
 │   ├── transformers.joblib                      dict: num_imputer, num_scaler, ohe, mlb, tfidf
 │   ├── meta.json                                groups (column ranges) + tham số
-│   └── feature_names.txt                        27,107 dòng tên feature
+│   └── feature_names.txt                        32,107 dòng tên feature
+│
+├── models/                                      ← .gitignore (sinh từ stage 4)
+│   ├── lgbm_best.txt, lgbm_no_year.txt          LightGBM native (Unicode-safe save)
+│   ├── ridge_final.joblib, sgd_final.joblib     sklearn pickled
+│   ├── predictions_test.csv                     8 cột (actual + 7 model preds)
+│   ├── metrics.csv                              bảng MAE/RMSE/R²
+│   ├── hyperparams.json                         best params + ensemble weights
+│   └── optuna_trials.json                       full Optuna trial log
+│
+├── pyproject.toml                               ← uv dep manifest (pandas, sklearn, lightgbm, optuna…)
+├── .python-version                              3.12
+├── uv.lock                                      reproducibility snapshot
 │
 ├── notebooks/
 │   ├── _download_and_split.py                   ← tái tạo raw_data từ HuggingFace
-│   ├── _build_03.py                             ← builder của 03 (gitignore, để tái tạo notebook nếu cần)
+│   ├── _build_03.py, _build_04.py               ← builder (gitignore, nbformat)
 │   ├── 01_EDA.ipynb                             ✅ ĐÃ XONG
 │   ├── 02_Cleaning.ipynb                        ✅ ĐÃ XONG
-│   ├── 03_Feature_Engineering.ipynb             ✅ ĐÃ XONG
-│   └── 04_Modeling.ipynb                        ⏳ skeleton — chưa làm
+│   ├── 03_Feature_Engineering.ipynb             ✅ ĐÃ XONG (32k features)
+│   └── 04_Modeling.ipynb                        ⏳ đang chạy (Optuna LGBM refit full)
 │
 ├── report/                                      ← để PDF báo cáo cuối cùng
 └── slide/                                       ← để PDF slide cuối cùng
@@ -101,8 +113,8 @@ Phải chứa đủ:
 |---|---|---|---|---|
 | 1 | `01_EDA.ipynb` | `raw_data/raw_data_{train,test}.csv` | Biểu đồ + nhận xét + 3 hàm parse | ✅ |
 | 2 | `02_Cleaning.ipynb` | `raw_data/raw_data_{train,test}.csv` | `clean_data/clean_data_{train,test}.csv` | ✅ |
-| 3 | `03_Feature_Engineering.ipynb` | `clean_data/clean_data_{train,test}.csv` | `features/X_*.npz`, `y_*.npy`, `transformers.joblib`, `meta.json` | ✅ |
-| 4 | `04_Modeling.ipynb` | `features/*` | Bảng so sánh model + nhận xét | ⏳ |
+| 3 | `03_Feature_Engineering.ipynb` | `clean_data/clean_data_{train,test}.csv` | `features/X_*.npz` (32k cột), `y_*.npy`, `transformers.joblib`, `meta.json` | ✅ |
+| 4 | `04_Modeling.ipynb` | `features/*` | `models/*.txt/joblib/csv/json`, plots, ensemble | ⏳ đang chạy |
 
 ---
 
@@ -140,12 +152,25 @@ Phải chứa đủ:
 - Stage 4 sẽ train **2 model pair-wise** (có `year` vs không `year`) để báo cáo nhận xét.
 
 ### Text features (stage 3)
-- TF-IDF **riêng từng cột** (`job_description`, `requirements`, `benefits`) rồi `hstack`. Không concat trước rồi vectorize 1 lần.
+- TF-IDF **riêng từng cột** (`job_title`, `job_description`, `requirements`, `benefits`) rồi `hstack`. Không concat trước rồi vectorize 1 lần.
+- 2 bộ params: **`job_title`** (text ngắn) max=5k, **ngram=(1,2)** bigram, min_df=5; còn lại (text dài) max=10k, unigram, min_df=10.
+- Numeric scaler: **`StandardScaler()`** (with_mean=True) — center cả 2 cột. Trước đây dùng `with_mean=False` gây bug `year` scale ~1730 làm SGD/Lasso diverge → đã sửa.
 
 ### Training (stage 4)
-- **Stratified sample 150k** từ train (tầng theo `job_industry × year`) cho CV 5-fold chọn hyperparam.
-- Refit trên FULL train (~459k) với hyperparam tối ưu → evaluate trên test (114k).
-- Metric: MAE, RMSE, R² (và optional MAPE) ở thang triệu VNĐ.
+- **Stratified sample 150k** từ train (tầng theo `first_industry`) cho CV chọn hyperparam.
+- **5 model:** Baseline (group-mean) | Ridge (5-fold CV, alpha grid) | Lasso-SGD (5-fold CV, alpha grid) | LightGBM (**Optuna 15-trial TPE + Hyperband pruner, 3-fold CV**) | Ensemble (weighted average 1/MAE của Ridge+Lasso+LightGBM).
+- Refit best hyperparam trên FULL train (~459k) → evaluate test (114k) đúng 1 lần.
+- Metric: MAE, RMSE, R² ở thang triệu VNĐ (sau `expm1`).
+- Year ablation: zero cột year trong CSR (`tocsc` + zero data + `tocsr`) → refit LightGBM với cùng best_params.
+- LightGBM save dùng `model_to_string()` + Python write (Unicode-safe path).
+
+### Kết quả thực tế (đã chạy, ngày 2026-05-23)
+- Ridge (α=10): Test MAE = **2.573 triệu**, R²(M) = 0.543
+- Lasso-SGD (α=1e-5): Test MAE = **2.668 triệu**, nnz = 3,614 / 32,107 (11.3%)
+- LightGBM Optuna (best CV MAE = **2.382 triệu**): num_leaves=125 (chạm trần range), lr=0.068, min_child_samples=98, feature_fraction=0.607
+- Optuna: 15 trial / 185.7 phút / 6 pruned (40%)
+- ⏳ LightGBM refit full + year ablation + ensemble: chưa xong (đang chạy cell 19)
+- Kỳ vọng: LightGBM test MAE ~2.30, Ensemble ~2.25
 
 ---
 
@@ -193,13 +218,18 @@ Các notebook 01 và 02 đã được sinh bằng builder script tạm (`_build_
   - Numeric impute median (years_exp=3.0) + StandardScaler(with_mean=False); `r(years_exp, y) = +0.33`, `r(year, y) = +0.07`.
   - OHE 94 cột, multi-hot industries 51 cột, TF-IDF (10k + 9087 + 7873 = 26,960 cột) với `sublinear_tf=True`, `min_df=10`, `max_df=0.95`.
   - `y = log1p(expected_salary)`, lưu cùng `features/`. Stage 4 slice cột year qua `meta['groups']['numeric']` để so sánh có/không year.
-- [ ] **Stage 4 — Modeling** ([04_Modeling.ipynb](./notebooks/04_Modeling.ipynb)):
-  - Baseline: trung bình theo `job_industry × experience_level`.
-  - Linear: Ridge/Lasso.
-  - Tree: RandomForest, GradientBoosting (LightGBM nếu có).
-  - 5-fold CV trên sample 150k → chốt hyperparam → fit full → evaluate test.
-  - So sánh: with `year` vs without `year`.
-  - Báo cáo MAE/RMSE/R² + feature importance + sai số.
-- [ ] **Báo cáo + Slide** theo `Mau tieu luan KHDL_2026.docx`.
-- [ ] **Đăng ký tên đề tài** trên Google Sheets (trước CN 24/5).
+- [⏳] **Stage 4 — Modeling** ([04_Modeling.ipynb](./notebooks/04_Modeling.ipynb)) — đang chạy:
+  - ✅ Baseline (group-mean `industry × years_exp`): MAE 3.93
+  - ✅ Ridge CV + refit + test: MAE 2.573 (best α=10)
+  - ✅ Lasso-SGD CV + refit + test: MAE 2.668 (best α=1e-5, 11.3% nonzero coef)
+  - ✅ LightGBM Optuna 15 trial TPE + Hyperband: best CV MAE 2.382
+  - ⏳ LightGBM refit full train (cell 19, đang chạy ~30-60')
+  - ⏳ Year ablation (cell 21)
+  - ⏳ Ensemble weighted (cell 23)
+  - ⏳ Plots (predicted vs actual, residuals, feature importance), per-segment errors, save artifacts
+- [ ] **Báo cáo PDF** (15-20 trang) theo `Mau tieu luan KHDL_2026.docx`. **Không được đưa code vào.** Dùng bảng + đồ thị + prose.
+- [ ] **Slide PDF** ≤ 15 phút — focus đặc tính dữ liệu + bảng so sánh model.
+- [ ] **Đăng ký tên đề tài** trên Google Sheets — **deadline CN 24/5/2026** (gấp!)
 - [ ] **Điền tên + MSSV** vào [README.md](./README.md#L88) — phân công nhiệm vụ trong nhóm.
+- [ ] **In bản cứng báo cáo** — nộp đầu buổi thi (phải khớp 100% với PDF nộp online).
+- [ ] **Chuẩn bị 2-3 máy tính** mang theo phòng sự cố khi trình bày slide.

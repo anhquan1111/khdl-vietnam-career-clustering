@@ -107,7 +107,7 @@ Sau khi tải, dữ liệu được chia ngẫu nhiên **80% train / 20% test** 
 
 | STT | Họ và tên | MSSV | Nhiệm vụ |
 |-----|-----------|------|----------|
-| 1   |           |      |          |
+| 1   |Võ Trần Anh Quân   |      |          |
 | 2   |           |      |          |
 | 3   |           |      |          |
 
