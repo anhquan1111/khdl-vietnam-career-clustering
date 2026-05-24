@@ -93,22 +93,23 @@ Phải chứa đủ:
 │   ├── clean_data_train.csv                     545,480 dòng / 1,037 MB (giữ 99.87%, có flag salary_missing)
 │   └── clean_data_test.csv                      60,606 dòng / 115 MB (giữ 99.86%)
 │
-├── features/                                    ← .gitignore — SẼ REBUILD
-│   ├── X_train.npz / X_test.npz                 sparse CSR (số chiều tuỳ stage 3 mới)
-│   ├── X_train_svd.npy / X_test_svd.npy         ← MỚI: dense sau TruncatedSVD (~50–100 chiều) để clustering
-│   ├── transformers.joblib                      dict: num_imputer, num_scaler, ohe, mlb, tfidf, svd
-│   ├── meta.json                                groups (column ranges) + tham số
-│   └── feature_names.txt                        tên feature
+├── features/                                    ← .gitignore — đã rebuild (Stage 3 clustering schema)
+│   ├── X_train.npz / X_test.npz                 sparse CSR 545k×25,899 (508 MB) / 60k×25,899 (59 MB)
+│   ├── X_train_svd.npy / X_test_svd.npy         dense float32 545k×100 (218 MB) / 60k×100 (24 MB)
+│   ├── transformers.joblib                      dict: num_imputer, num_scaler, ohe, mlb, tfidf, svd (10 MB)
+│   ├── meta.json                                groups + explained_variance + tham số
+│   └── feature_names.txt                        25,899 tên feature sparse
 │
-├── models/                                      ← .gitignore — SẼ REBUILD (clustering artifacts)
-│   ├── kmeans_best.joblib                       MiniBatchKMeans tốt nhất
-│   ├── gmm_best.joblib                          GaussianMixture (nếu chọn)
-│   ├── hdbscan_best.joblib                      HDBSCAN (nếu chọn)
-│   ├── labels_train.npy / labels_test.npy       nhãn cụm cho mỗi dòng
-│   ├── cluster_profiles.csv                     bảng mô tả mỗi cụm (mean/mode mỗi feature)
-│   ├── cluster_names.json                       nhãn tự gán cho mỗi cụm
-│   ├── metrics.csv                              silhouette / DB / CH theo k
-│   └── plots/                                   elbow, silhouette curve, t-SNE/UMAP visualization
+├── models/                                      ← .gitignore — đã rebuild (clustering artifacts)
+│   ├── kmeans_best.joblib                       MiniBatchKMeans (k=6, fit full train) — 244 KB
+│   ├── gmm_best.joblib                          GaussianMixture (BIC best k=15, fit sample 30k) — 24 KB
+│   ├── labels_train.npy / labels_test.npy       nhãn cụm 545k / 61k — 2.2 MB / 243 KB
+│   ├── cluster_profiles.csv                     6 cluster × {n, pct, mean_salary, top industry/province/...}
+│   ├── cluster_names.json                       nhãn tự gán (auto, user edit tay sau cho gọn)
+│   ├── k_search_metrics.csv                     inertia/silhouette/DB/CH theo k ∈ [3, 20]
+│   ├── gmm_bic_aic.csv                          BIC/AIC theo k ∈ [3, 15]
+│   ├── demo_10_test_samples.csv                 10 mẫu test demo (theo yêu cầu template)
+│   └── clustering_summary.json                  metadata tổng kết
 │
 ├── pyproject.toml                               ← uv dep manifest
 ├── .python-version                              3.12
@@ -118,8 +119,8 @@ Phải chứa đủ:
 │   ├── _download_and_split.py                   ← tái tạo raw_data (đã chuyển sang chunked-read, 90/10)
 │   ├── 01_EDA.ipynb                             ✅ XONG (đã migrate sang clustering, sample 150k để fit RAM)
 │   ├── 02_Cleaning.ipynb                        ✅ XONG (salary thành 3 feature + flag, chunked apply full)
-│   ├── 03_Feature_Engineering.ipynb             ⚠️ CẦN SỬA: bỏ y, thêm TruncatedSVD
-│   └── 04_Modeling.ipynb                        ❌ VIẾT LẠI HOÀN TOÀN: regression → clustering
+│   ├── 03_Feature_Engineering.ipynb             ✅ XONG (bỏ y, +TruncatedSVD 100D giữ 75.6% variance, chunked apply)
+│   └── 04_Modeling.ipynb                        ✅ XONG (MiniBatchKMeans k=6 + GMM compare + profile + nhãn + demo)
 │
 ├── report/                                      ← để PDF báo cáo cuối cùng
 └── slide/                                       ← để PDF slide cuối cùng
@@ -133,8 +134,8 @@ Phải chứa đủ:
 |---|---|---|---|---|
 | 1 | `01_EDA.ipynb` | `raw_data/raw_data_{train,test}.csv` (train sample 150k) | Biểu đồ + nhận xét + 3 hàm parse + phát hiện trục cluster tiềm năng | ✅ Done |
 | 2 | `02_Cleaning.ipynb` | `raw_data/raw_data_{train,test}.csv` | `clean_data/clean_data_{train,test}.csv` (17 cột, salary là 3 feature + flag) | ✅ Done |
-| 3 | `03_Feature_Engineering.ipynb` | `clean_data/clean_data_{train,test}.csv` | Sparse CSR + **TruncatedSVD dense ~50–100 chiều** | ⚠️ Sửa: bỏ `y`, thêm SVD |
-| 4 | `04_Modeling.ipynb` | `features/*` | Clustering artifacts (xem mục models/ ở Section 3) | ❌ Viết lại |
+| 3 | `03_Feature_Engineering.ipynb` | `clean_data/clean_data_{train,test}.csv` | Sparse CSR 25,899D + dense SVD 100D (75.6% variance) | ✅ Done |
+| 4 | `04_Modeling.ipynb` | `features/*` | Clustering artifacts (xem mục models/ ở Section 3) | ✅ Done |
 
 ---
 
@@ -242,8 +243,8 @@ jupyter nbconvert --to notebook --execute notebooks/02_Cleaning.ipynb --output n
 - [x] **Stage 0 Re-split** — `_download_and_split.py` đã chuyển sang chunked-read + 90/10. Train 546,190 / Test 60,688.
 - [x] **Stage 1 EDA** — đã migrate narrative + sửa quyết định outlier (drop sentinel + drop >100M không sentinel) + đã re-run thành công. EDA dùng sample 150k vì full 546k load vào pandas sẽ OOM (~3–5 GB). Kết luận (parse_rate, pattern distribution, junk bucket detection) khớp với phiên bản full trước đó.
 - [x] **Stage 2 Cleaning** — đã migrate. Salary thành 3 feature (`salary_min`, `salary_max`, `salary_mid`) + flag `salary_missing`. Schema clean_data có 17 cột (thay vì 14). Junk bucket `9.0` vẫn detect (rule-based: n<500 & pos_missing>0.5). Áp dụng full data qua chunked-read 50k row/batch + write incremental. **Retain rate 99.87% / 99.86%** (cao hơn ~5% so với regression cũ vì giữ dòng `salary_missing`). Train clean = 545,480 dòng / 1,037 MB; Test clean = 60,606 dòng / 115 MB.
-- [ ] **Stage 3 Feature Engineering** — bỏ `y = log1p(salary)`, thêm TruncatedSVD step (50–100 chiều), lưu thêm `X_*_svd.npy`. Lưu ý: clean_data_train.csv giờ là 1 GB, cần chunked-read tương tự stage 2.
-- [ ] **Stage 4 Modeling** — viết lại hoàn toàn: MiniBatchKMeans + (GMM hoặc HDBSCAN), elbow + silhouette, cluster profiling, gán nhãn, t-SNE/UMAP plot, **demo 10 mẫu từ test**.
+- [x] **Stage 3 Feature Engineering** — đã migrate. Bỏ y. Numeric 6 cột (3 salary + flag + years_exp + year). Sparse X = 25,899 chiều (numeric+OHE+industries+TF-IDF). **TruncatedSVD 100D giữ 75.6% variance** (first 10: 56.3%, first 50: 71.8%). Fit transformers + SVD trên sample 150k, transform full train chunked 50k/batch → vstack → SVD transform once. Output `X_{train,test}.npz` (508+59 MB) + `X_{train,test}_svd.npy` (218+24 MB) + transformers (10 MB). Sanity: distance giữa centroid IT vs ngành khác ~4.9 (rõ), trong nhóm sales/admin ~1.5-2.1 (gần đúng). Sẵn sàng cho K-Means.
+- [x] **Stage 4 Modeling** — viết lại hoàn toàn từ regression. MiniBatchKMeans k-search ∈ [3, 20] với 4 metric (inertia/silhouette/DB/CH). **K_FINAL=6** (best silhouette=0.1200). GMM compare BIC/AIC trên sample 30k → best k=15 (gợi ý cấu trúc fine hơn). Cluster profiling chunked clean_data_train.csv → top industries/province/position + mean salary/years_exp per cluster. Top TF-IDF tokens per cluster (centroid trong sparse X). Auto-gen `cluster_names.json` (user edit tay sau). t-SNE 2D stratified sample 8k. **Demo 10 mẫu test** đã sinh (theo yêu cầu template). Total runtime <10 phút. Cluster 5 (5.4%) = "tin tuyển dụng thiếu lương".
 
 ### Việc bên ngoài code (user tự lo)
 - [ ] Đăng ký lại tên đề tài trên Google Sheets — **deadline CN 24/5/2026**.
