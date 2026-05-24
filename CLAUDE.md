@@ -19,7 +19,7 @@
 - **Tỉ lệ split (theo template báo cáo `Mau tieu luan KHDL_2026.docx`):** **90/10** (train/test, random_state=42).
   - Train (~546k dòng): dùng để huấn luyện và lựa chọn mô hình (số cụm, hyperparam clustering).
   - Test (~61k dòng): với bài clustering, **chỉ random 10 mẫu** trong test để demo kết quả thuật toán phân cụm (gán nhãn cụm, hiển thị nội dung job tương ứng). Không dùng test để đánh giá metric.
-  - ⚠️ **Hiện tại file CSV đang split 80/20** (cho đề cũ) — cần re-split lại bằng `_download_and_split.py`.
+  - ✅ Đã re-split 90/10 (commit `dcfc266` là checkpoint regression cũ; sau đó `_download_and_split.py` đã chuyển sang chunked-read tránh OOM).
 - **TLTK GV gợi ý:**
   - Phần 2.2 (Phân cụm) của bài giảng môn học (link Drive trong [đề bài cập nhật](./2026_MS%20Teams-TB%20nộp%20tiểu%20luận%20cuối%20kỳ_23.15(2).docx.md)).
   - [GeeksforGeeks — Clustering in Machine Learning](https://www.geeksforgeeks.org/machine-learning/clustering-in-machine-learning/).
@@ -86,12 +86,12 @@ Phải chứa đủ:
 │
 ├── raw_data/                                    ← .gitignore (1.5+ GB)
 │   ├── data.parquet                             (file gốc tải về — toàn bộ 606,878 dòng)
-│   ├── raw_data_train.csv                       ⚠️ HIỆN ĐANG SAI: 485k (80%) — phải re-split thành 90% (~546,190 dòng)
-│   └── raw_data_test.csv                        ⚠️ HIỆN ĐANG SAI: 121k (20%) — phải re-split thành 10% (~60,688 dòng)
+│   ├── raw_data_train.csv                       546,190 dòng / 1,105 MB (90%, đã re-split 90/10)
+│   └── raw_data_test.csv                        60,688 dòng / 123 MB (10%)
 │
-├── clean_data/                                  ← .gitignore — SẼ REBUILD theo schema clustering
-│   ├── clean_data_train.csv                     (~458k dòng, schema mới)
-│   └── clean_data_test.csv                      (~114k dòng, schema mới)
+├── clean_data/                                  ← .gitignore — đã rebuild theo schema clustering (17 cột)
+│   ├── clean_data_train.csv                     545,480 dòng / 1,037 MB (giữ 99.87%, có flag salary_missing)
+│   └── clean_data_test.csv                      60,606 dòng / 115 MB (giữ 99.86%)
 │
 ├── features/                                    ← .gitignore — SẼ REBUILD
 │   ├── X_train.npz / X_test.npz                 sparse CSR (số chiều tuỳ stage 3 mới)
@@ -115,9 +115,9 @@ Phải chứa đủ:
 ├── uv.lock                                      reproducibility snapshot
 │
 ├── notebooks/
-│   ├── _download_and_split.py                   ← tái tạo raw_data từ HuggingFace
-│   ├── 01_EDA.ipynb                             ✅ ĐÃ XONG (regression) → ⚠️ CẦN SỬA narrative + cleaning rule
-│   ├── 02_Cleaning.ipynb                        ⚠️ CẦN SỬA: salary thành feature, không drop dòng không parse được
+│   ├── _download_and_split.py                   ← tái tạo raw_data (đã chuyển sang chunked-read, 90/10)
+│   ├── 01_EDA.ipynb                             ✅ XONG (đã migrate sang clustering, sample 150k để fit RAM)
+│   ├── 02_Cleaning.ipynb                        ✅ XONG (salary thành 3 feature + flag, chunked apply full)
 │   ├── 03_Feature_Engineering.ipynb             ⚠️ CẦN SỬA: bỏ y, thêm TruncatedSVD
 │   └── 04_Modeling.ipynb                        ❌ VIẾT LẠI HOÀN TOÀN: regression → clustering
 │
@@ -131,8 +131,8 @@ Phải chứa đủ:
 
 | # | Notebook | Input | Output | Trạng thái |
 |---|---|---|---|---|
-| 1 | `01_EDA.ipynb` | `raw_data/raw_data_{train,test}.csv` | Biểu đồ + nhận xét + 3 hàm parse + phát hiện trục cluster tiềm năng | ⚠️ Sửa narrative + 1 quyết định cleaning |
-| 2 | `02_Cleaning.ipynb` | `raw_data/raw_data_{train,test}.csv` | `clean_data/clean_data_{train,test}.csv` (salary là feature, không drop dòng) | ⚠️ Sửa |
+| 1 | `01_EDA.ipynb` | `raw_data/raw_data_{train,test}.csv` (train sample 150k) | Biểu đồ + nhận xét + 3 hàm parse + phát hiện trục cluster tiềm năng | ✅ Done |
+| 2 | `02_Cleaning.ipynb` | `raw_data/raw_data_{train,test}.csv` | `clean_data/clean_data_{train,test}.csv` (17 cột, salary là 3 feature + flag) | ✅ Done |
 | 3 | `03_Feature_Engineering.ipynb` | `clean_data/clean_data_{train,test}.csv` | Sparse CSR + **TruncatedSVD dense ~50–100 chiều** | ⚠️ Sửa: bỏ `y`, thêm SVD |
 | 4 | `04_Modeling.ipynb` | `features/*` | Clustering artifacts (xem mục models/ ở Section 3) | ❌ Viết lại |
 
@@ -239,10 +239,10 @@ jupyter nbconvert --to notebook --execute notebooks/02_Cleaning.ipynb --output n
 - ✅ Stage 4 Modeling regression (Ridge MAE=2.57, LightGBM CV MAE=2.38) — **sẽ KHÔNG dùng cho bài nộp mới**
 
 ### Migration sang clustering (đang đi từng bước)
-- [ ] **Stage 0 Re-split** — sửa `_download_and_split.py` từ 80/20 → **90/10** (theo template báo cáo). Re-generate `raw_data_{train,test}.csv`. Số dòng dự kiến: train ~546,190 / test ~60,688.
-- [⏳] **Stage 1 EDA** — đang sửa narrative + quyết định outlier (xem chi tiết trong câu trả lời của Claude trong session này). Re-run sau khi đã re-split để cập nhật số liệu.
-- [ ] **Stage 2 Cleaning** — sửa cách xử lý salary (3 cột feature + flag missing), bỏ logic drop > 100M chỉ giữ drop sentinel + drop > 100M không sentinel.
-- [ ] **Stage 3 Feature Engineering** — bỏ `y = log1p(salary)`, thêm TruncatedSVD step (50–100 chiều), lưu thêm `X_*_svd.npy`.
+- [x] **Stage 0 Re-split** — `_download_and_split.py` đã chuyển sang chunked-read + 90/10. Train 546,190 / Test 60,688.
+- [x] **Stage 1 EDA** — đã migrate narrative + sửa quyết định outlier (drop sentinel + drop >100M không sentinel) + đã re-run thành công. EDA dùng sample 150k vì full 546k load vào pandas sẽ OOM (~3–5 GB). Kết luận (parse_rate, pattern distribution, junk bucket detection) khớp với phiên bản full trước đó.
+- [x] **Stage 2 Cleaning** — đã migrate. Salary thành 3 feature (`salary_min`, `salary_max`, `salary_mid`) + flag `salary_missing`. Schema clean_data có 17 cột (thay vì 14). Junk bucket `9.0` vẫn detect (rule-based: n<500 & pos_missing>0.5). Áp dụng full data qua chunked-read 50k row/batch + write incremental. **Retain rate 99.87% / 99.86%** (cao hơn ~5% so với regression cũ vì giữ dòng `salary_missing`). Train clean = 545,480 dòng / 1,037 MB; Test clean = 60,606 dòng / 115 MB.
+- [ ] **Stage 3 Feature Engineering** — bỏ `y = log1p(salary)`, thêm TruncatedSVD step (50–100 chiều), lưu thêm `X_*_svd.npy`. Lưu ý: clean_data_train.csv giờ là 1 GB, cần chunked-read tương tự stage 2.
 - [ ] **Stage 4 Modeling** — viết lại hoàn toàn: MiniBatchKMeans + (GMM hoặc HDBSCAN), elbow + silhouette, cluster profiling, gán nhãn, t-SNE/UMAP plot, **demo 10 mẫu từ test**.
 
 ### Việc bên ngoài code (user tự lo)
