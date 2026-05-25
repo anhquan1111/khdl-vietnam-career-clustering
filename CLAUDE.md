@@ -48,11 +48,14 @@ Quy tắc đặt tên: `STTnhom - Tên đề tài` (vd. `09 - Phân cụm bộ d
 Phải chứa đủ:
 
 1. **File PDF báo cáo** — giống 100% bản in, độ dài 15–20 trang (không kể mục lục & TLTK). **Không được đưa code vào báo cáo.**
-2. **File PDF slide** — trình bày theo thứ tự nội dung mẫu báo cáo, tối đa 15 phút.
-3. **File `.ipynb`** — một hoặc nhiều notebook.
-4. **File README** — hướng dẫn trình tự chạy chương trình.
-5. **2 file (hoặc thư mục con) raw data** — đặt tên đúng: `raw_data_train.csv`, `raw_data_test.csv`.
-6. **2 file (hoặc thư mục con) clean data** — đặt tên đúng: `clean_data_train.csv`, `clean_data_test.csv`.
+2. **File PDF slide** — trình bày theo thứ tự nội dung mẫu báo cáo, **tối đa 10 phút** (giảm từ 15 phút trước đây).
+3. **File `.ipynb`** — một hoặc nhiều notebook (có thể giữ 5 stages 01-05 hiện tại).
+4. **🆕 BẮT BUỘC: `training.ipynb` + `testing.ipynb`** (GV update yêu cầu ngày 2026-05-25):
+   - `training.ipynb` — notebook training tổng hợp. KHÔNG cần chạy lúc demo (chỉ có code).
+   - `testing.ipynb` — notebook demo, **PHẢI chạy được trong tối đa 5 phút** sau khi present slide. Load model + dữ liệu test → predict cluster → hiển thị kết quả 10 mẫu + visualization.
+5. **File README** — hướng dẫn trình tự chạy chương trình.
+6. **2 file (hoặc thư mục con) raw data** — đặt tên đúng: `raw_data_train.csv`, `raw_data_test.csv`.
+7. **2 file (hoặc thư mục con) clean data** — đặt tên đúng: `clean_data_train.csv`, `clean_data_test.csv`.
 
 ### 2.3 4 lỗi → 0 điểm (cấm tuyệt đối)
 
@@ -61,12 +64,14 @@ Phải chứa đủ:
 3. Nộp muộn hoặc tự ý sửa sau khi hết hạn.
 4. Báo cáo và chương trình không khớp với thông tin đăng ký trên Google Sheets.
 
-### 2.4 Slide
+### 2.4 Slide + Demo (yêu cầu mới ngày 2026-05-25)
 
-- Trình bày tối đa 15 phút.
-- Tập trung vào **đặc tính dữ liệu** và **nhận xét/lý giải** kèm bảng + đồ thị.
-- Đặc biệt: nhấn vào **so sánh các thuật toán phân cụm**, **các metric đánh giá**, và **diễn giải nhãn cụm**.
+- **Slide PDF: tối đa 10 phút** (giảm từ 15 phút).
+- **Sau slide: chạy demo `testing.ipynb` tối đa 5 phút** để giải thích kết quả.
+- Tổng quỹ thời gian bảo vệ: **10 + 5 = 15 phút**.
+- Tập trung vào **đặc tính dữ liệu** + **so sánh các thuật toán phân cụm** + **các metric đánh giá** + **diễn giải nhãn cụm**.
 - Mang sẵn **2–3 máy tính** phòng sự cố.
+- `testing.ipynb` phải tự chứa: load model + predict + show 10 demo + viz. Chạy được < 1 phút thực thi để có thời gian giải thích 4 phút.
 
 ---
 
@@ -246,11 +251,17 @@ jupyter nbconvert --to notebook --execute notebooks/02_Cleaning.ipynb --output n
 - [x] **Stage 3 Feature Engineering v2** — đã migrate + cải thiện. Bỏ y. Numeric 6 cột (3 salary + flag + years_exp + year). Sparse X = **25,664 chiều** (sau VN stopwords + max_df=0.85). **TruncatedSVD 150D giữ 77.72% variance** (tăng từ 100D/75.6%). Fit transformers + SVD trên sample 150k, transform full train chunked 50k/batch → vstack → SVD transform once. Output `X_{train,test}.npz` + `X_{train,test}_svd.npy` + transformers. **Cải thiện v2**: thêm VN stopwords list (~80 từ function words + pronouns) để TF-IDF không bị nhiễu bởi "theo/có/của/...", giảm max_df 0.95→0.85, tăng SVD 100→150.
 - [x] **Stage 4 Modeling v2** — viết lại + Optuna study. MiniBatchKMeans k-search grid ∈ [3, 25] với 4 metric. **Optuna 30 trials TPE** tuning (k, init, whitening_strength). Logic: compare grid best vs Optuna best → chọn cái có silhouette cao hơn. Kết quả: **grid wins k=5** (sil=0.1279), Optuna chọn k=21 nhưng tệ hơn (sil=0.0959). **Whitening không có tác dụng** (best ≈ 0). GMM compare BIC/AIC → k=14. Final metrics: sil=**0.1279** (cải thiện 6.6% so v1=0.1200), DB=**2.21** (cải thiện 4.3% so v1=2.31), CH=3249. 5 cluster sạch (không trùng nhãn như v1 có 6): CSKH junior, Sales junior, CSKH senior 23tr, Kế toán mid, Other/missing. Total runtime ~15 phút.
 
+### Việc tiếp theo CODE (GV update yêu cầu 2026-05-25)
+- [ ] **Tạo `training.ipynb`** — orchestrator gọi 5 stages (01-05). Không cần execute lúc demo.
+- [ ] **Tạo `testing.ipynb`** — standalone demo. Load model + predict + show 10 mẫu test + 1 viz. Phải chạy được < 1 phút (5 phút defense). Đây là notebook GV sẽ Run All lúc bảo vệ.
+- [ ] (Optional) Stage 5 SBERT — đã build notebook, đang loay hoay HDBSCAN treo CPU. Có thể skip HDBSCAN, chỉ giữ KMeans + so sánh stage 4.
+
 ### Việc bên ngoài code (user tự lo)
 - [ ] Đăng ký lại tên đề tài trên Google Sheets — **deadline CN 24/5/2026**.
 - [ ] Đổi tên folder nộp bài thành `09 - Phân cụm bộ dữ liệu việc làm Việt Nam`.
+- [ ] **Edit tay `cluster_names.json` + `cluster_names_embed.json`** — sửa nhãn auto thành tên có ý nghĩa kinh tế (vd. *"IT mid-level HCM"*, *"Sales junior toàn quốc"*). Đây là phần GV chấm cao nhất.
 - [ ] Điền tên + MSSV vào [README.md](./README.md) — phân công nhiệm vụ.
 - [ ] Viết báo cáo PDF (15–20 trang) theo [Mau tieu luan KHDL_2026.docx](./Mau%20tieu%20luan%20KHDL_2026.docx).
-- [ ] Slide PDF ≤ 15 phút.
-- [ ] In bản cứng báo cáo.
+- [ ] **Slide PDF ≤ 10 phút** + chuẩn bị demo `testing.ipynb` 5 phút.
+- [ ] In bản cứng báo cáo (giống 100% PDF).
 - [ ] Chuẩn bị 2–3 máy tính dự phòng.
