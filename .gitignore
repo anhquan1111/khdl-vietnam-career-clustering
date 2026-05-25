@@ -51,3 +51,4 @@ desktop.ini
 # ─── Scripts tạm bợ (builder dạng underscore prefix) ─────────────────────────
 notebooks/_*.py
 !notebooks/_download_and_split.py
+!notebooks/_embed_jds.py
