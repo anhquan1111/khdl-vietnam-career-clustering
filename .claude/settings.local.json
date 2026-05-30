@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(export PYTHONIOENCODING=utf-8)",
+      "Read(//tmp/**)",
+      "Bash(export PYTHONIOENCODING=utf-8 && python -c \" *)",
+      "PowerShell($env:PYTHONIOENCODING = \"utf-8\"; python notebooks/_replot_tsne.py)"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
+    ]
+  }
+}
